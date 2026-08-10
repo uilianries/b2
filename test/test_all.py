@@ -486,6 +486,7 @@ tests = [
     "toolset_intel_darwin",
     "toolset_msvc",
     "toolset_requirements",
+    "toolset_target_os_autodetect",
     "transitive_skip",
     "unit_test",
     "unused",
