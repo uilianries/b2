@@ -184,6 +184,7 @@ rule init ( version ? : command * : options * : requirement * )
     }
     local machine ;
     local target-os ;
+    local architecture ;
     #   Autodetect the version and flavor if not given.
     if $(command)
     {
@@ -211,6 +212,26 @@ rule init ( version ? : command * : options * : requirement * )
             case *qnx*     : target-os ?= qnxnto ;
             # TODO: finish this list.
         }
+        switch $(machine:L)
+        {
+            case *aarch64*   : architecture ?= arm ;
+            case *arm*       : architecture ?= arm ;
+            case *x86_64*    : architecture ?= x86 ;
+            case *amd64*     : architecture ?= x86 ;
+            case *86*        : architecture ?= x86 ;
+            case *powerpc*   : architecture ?= power ;
+            case *ppc*       : architecture ?= power ;
+            case *sparc*     : architecture ?= sparc ;
+            case *s390*      : architecture ?= s390x ;
+            case *riscv*     : architecture ?= riscv ;
+            case *loongarch* : architecture ?= loongarch ;
+            case *mips64*    : architecture ?= mips64 ;
+            case *mips*      : architecture ?= mips ;
+            case *hppa*      : architecture ?= parisc ;
+            case *parisc*    : architecture ?= parisc ;
+            case *ia64*      : architecture ?= ia64 ;
+            # TODO: finish this list.
+        }
     }
 
     local condition ;
@@ -219,11 +240,21 @@ rule init ( version ? : command * : options * : requirement * )
 
     common.handle-options gcc : $(condition) : $(command) : $(options) ;
 
-    # Set the default target-os for this toolset.
+    # Set the default target-os and architecture for this toolset, unless
+    # already fixed by the caller's requirements.
+    local conditionx ;
+    if ( $(target-os) && ! [ feature.get-values <target-os> : $(requirement) ] )
+        || ( $(architecture) && ! [ feature.get-values <architecture> : $(requirement) ] )
+    {
+        conditionx = [ regex.replace $(condition) "/" "," ] ;
+    }
     if $(target-os) && ! [ feature.get-values <target-os> : $(requirement) ]
     {
-        local conditionx = [ regex.replace $(condition) "/" "," ] ;
         toolset.add-defaults $(conditionx)\:<target-os>$(target-os) ;
+    }
+    if $(architecture) && ! [ feature.get-values <architecture> : $(requirement) ]
+    {
+        toolset.add-defaults $(conditionx)\:<architecture>$(architecture) ;
     }
 
     # If gcc is installed in a non-standard location, we would need to add

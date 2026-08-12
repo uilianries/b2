@@ -35,15 +35,17 @@ rule init ( * : * )
 }
 
 
-rule set-target-os-default ( toolset : condition * : command-string : options * )
+rule set-defaults ( toolset : condition * : command-string : options * )
 {
-    # Autodetect target-os from the compiler's own triple, unless the
-    # toolset was already told what to target
+    # Autodetect target-os and architecture from the compiler's own triple,
+    # unless the toolset was already told what to target.
     if ! [ feature.get-values <target-os> : $(options) ]
+        || ! [ feature.get-values <architecture> : $(options) ]
     {
         local machine = [ MATCH "^([^ ]+)" :
             [ SHELL "$(command-string) -dumpmachine" ] ] ;
         local target-os ;
+        local architecture ;
         switch $(machine:L)
         {
             case *android* : target-os ?= android ;
@@ -58,10 +60,38 @@ rule set-target-os-default ( toolset : condition * : command-string : options * 
             case *solaris* : target-os ?= solaris ;
             case *qnx*     : target-os ?= qnxnto ;
         }
-        if $(target-os)
+        switch $(machine:L)
         {
-            local conditionx = [ regex.replace $(condition) "/" "," ] ;
+            case *aarch64*   : architecture ?= arm ;
+            case *arm*       : architecture ?= arm ;
+            case *x86_64*    : architecture ?= x86 ;
+            case *amd64*     : architecture ?= x86 ;
+            case *86*        : architecture ?= x86 ;
+            case *powerpc*   : architecture ?= power ;
+            case *ppc*       : architecture ?= power ;
+            case *sparc*     : architecture ?= sparc ;
+            case *s390*      : architecture ?= s390x ;
+            case *riscv*     : architecture ?= riscv ;
+            case *loongarch* : architecture ?= loongarch ;
+            case *mips64*    : architecture ?= mips64 ;
+            case *mips*      : architecture ?= mips ;
+            case *hppa*      : architecture ?= parisc ;
+            case *parisc*    : architecture ?= parisc ;
+            case *ia64*      : architecture ?= ia64 ;
+        }
+
+        local conditionx ;
+        if $(target-os) || $(architecture)
+        {
+            conditionx = [ regex.replace $(condition) "/" "," ] ;
+        }
+        if $(target-os) && ! [ feature.get-values <target-os> : $(options) ]
+        {
             toolset.add-defaults $(conditionx)\:<target-os>$(target-os) ;
+        }
+        if $(architecture) && ! [ feature.get-values <architecture> : $(options) ]
+        {
+            toolset.add-defaults $(conditionx)\:<architecture>$(architecture) ;
         }
     }
 }
